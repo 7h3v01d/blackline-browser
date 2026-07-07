@@ -9,19 +9,7 @@ A privacy-focused personal browser built on **PyQt6 + QtWebEngine**, with a sign
 
 ---
 
-⚠️ **LICENSE & USAGE NOTICE — READ FIRST**
-
-This repository is **source-available for private technical evaluation and testing only**.
-
-- ❌ No commercial use  
-- ❌ No production use  
-- ❌ No academic, institutional, or government use  
-- ❌ No research, benchmarking, or publication  
-- ❌ No redistribution, sublicensing, or derivative works  
-- ❌ No independent development based on this code  
-
-All rights remain exclusively with the author.  
-Use of this software constitutes acceptance of the terms defined in **LICENSE.txt**.
+<img width="1282" height="852" alt="webbrowser" src="https://github.com/user-attachments/assets/d5335cda-b782-4655-a138-e524f19e6ae9" />
 
 ---
 
