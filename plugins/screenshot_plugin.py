@@ -1,6 +1,6 @@
 try:
     from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QLabel, QComboBox, QHBoxLayout, QFileDialog, QWidget
-    from PyQt6.QtGui import QAction, QPixmap, QImage, QPainter, QPen, QColor
+    from PyQt6.QtGui import QAction, QPixmap, QImage, QPainter, QPen
     from PyQt6.QtWebEngineWidgets import QWebEngineView
     from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
     from PyQt6.QtCore import Qt, QDateTime, QPoint, QRect
@@ -17,7 +17,7 @@ class SelectionOverlay(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
-        self.setStyleSheet("background: rgba(47, 214, 195, 0.10);")
+        self.setStyleSheet("background: rgba(255, 0, 0, 0.1);")
         self.start_pos = None
         self.end_pos = None
         self.selection_rect = None
@@ -42,7 +42,7 @@ class SelectionOverlay(QWidget):
     def paintEvent(self, event):
         if self.selection_rect:
             painter = QPainter(self)
-            painter.setPen(QPen(QColor("#2fd6c3"), 2, Qt.PenStyle.DashLine))
+            painter.setPen(QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DashLine))
             painter.drawRect(self.selection_rect)
 
 class ScreenshotDialog(QDialog):

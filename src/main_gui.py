@@ -82,11 +82,11 @@ class DownloadItemWidget(QWidget):
         style = ""
         if status == "Completed":
             self.progress_bar.setValue(100)
-            style = "QProgressBar::chunk { background-color: #4CAF50; }" # Green
+            style = "QProgressBar::chunk { background-color: #4be08a; }" # Phosphor (done)
         elif status == "Error":
-            style = "QProgressBar::chunk { background-color: #F44336; }" # Red
+            style = "QProgressBar::chunk { background-color: #ff5c66; }" # Red (error)
         elif status == "Stopped":
-            style = "QProgressBar::chunk { background-color: #FFC107; }" # Amber
+            style = "QProgressBar::chunk { background-color: #ffb454; }" # Amber (stopped)
         self.progress_bar.setStyleSheet(style)
 
 

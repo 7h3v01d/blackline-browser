@@ -1,6 +1,11 @@
 # 🌐 Personal Web Browser
 
-A privacy-focused personal browser built on **PyQt6 + QtWebEngine**, with a custom dark UI, speed dial new-tab page, DRM video support, ad blocking, a password vault, and a plugin system. Built as a daily driver for personal web use.
+A privacy-focused personal browser built on **PyQt6 + QtWebEngine**, with a signature dark-industrial UI, a speed-dial new-tab page, DRM video support, ad blocking, an encrypted password vault, and a plugin system. Built as a daily driver for personal web use.
+
+![Python](https://img.shields.io/badge/Python-3.11%2B-2fd6c3?style=flat-square&logo=python&logoColor=white)
+![PyQt6](https://img.shields.io/badge/PyQt6-QtWebEngine-ffb454?style=flat-square&logo=qt&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-4be08a?style=flat-square&logo=windows&logoColor=white)
+![License](https://img.shields.io/badge/License-Evaluation--Only-ff5c66?style=flat-square)
 
 ---
 
@@ -20,21 +25,33 @@ Use of this software constitutes acceptance of the terms defined in **LICENSE.tx
 
 ---
 
+## 🆕 Recent updates
+
+- **Full visual retheme** into the signature dark-industrial design language — obsidian/teal/amber/phosphor palette, JetBrains Mono typography, flat zero-radius chrome, corner-bracket speed-dial tiles, and a systems-monitor status bar. Applied end-to-end across the toolbar, tabs, menus, dialogs, panels, reading mode, and plugins.
+- **HTML5 video fullscreen now works** — a site's own fullscreen button (e.g. YouTube) properly goes full screen and hides all browser chrome.
+- **Picture-in-Picture rebuilt** as a Qt-side floating mini-player with two-way position handover (see below).
+- **YouTube Shorts wheel navigation** — the mouse wheel now moves between Shorts.
+
+---
+
 ## ✨ Features
 
 ### Interface
-- **Dark mode** — full Qt chrome theming (toolbar, tabs, menus, panels). Toggle with `Ctrl+Shift+D` or the 🌙 button. Preference saved across sessions.
-- **Custom new-tab page** — dark speed dial with a live clock, time-based greeting, DuckDuckGo search bar, and a tile grid of your favourite sites. Add/remove tiles at any time.
+- **Signature dark UI** — full Qt chrome theming (toolbar, tabs, menus, dialogs, panels) in the obsidian/teal/amber/phosphor palette with JetBrains Mono type and flat, zero-radius controls. The active tab carries a teal underline, secure connections glow phosphor-green, and a HUD status bar reports ad-block filters, vault state, and tab count. Toggle back to the light Qt theme with `Ctrl+Shift+D` or the 🌙 button; preference saved across sessions.
+- **Custom new-tab page** — a speed-dial dashboard with a monospace clock (teal ticking seconds), time-based greeting, DuckDuckGo search bar, and a grid of corner-bracket site tiles with a systems-readout footer. Add/remove tiles at any time; stored locally.
 - **Draggable, closable tabs** — close buttons on every tab, drag to reorder, double-click empty tab bar to open a new tab.
 - **Smart URL bar** — auto-detects URLs vs search queries. Bare domains (`github.com`) navigate directly; anything else searches DuckDuckGo.
 
 ### Browsing
 - **Session restore** — open tabs are saved automatically on close and restored next launch. Manual save via `File → Save Session`.
-- **Reading mode** (`Ctrl+Shift+R`) — strips any article down to clean readable text with a dark serif layout and A−/A+ font controls.
-- **Picture-in-Picture** (`Ctrl+Shift+P`) — floats the active video from any tab (YouTube, Netflix, etc.) into a persistent overlay window. Click again to exit.
+- **Reading mode** (`Ctrl+Shift+R`) — strips any article down to clean readable text with a dark serif layout, a monospace HUD bar, and A−/A+ font controls.
+- **Picture-in-Picture** (`Ctrl+Shift+P`) — pops the current video into a frameless, always-on-top mini-player you can drag by its bar and resize from the corner. Entering pauses the tab and opens the video at the same timestamp; the **↗ return** button hands the position back to the tab and resumes there, so you never lose your place, while **×** closes it but keeps the tab's position. Works for YouTube and direct video files.
+- **Fullscreen** — HTML5 video fullscreen works (e.g. YouTube's fullscreen button), hiding all browser chrome; toggle manually with `F11`, exit with `Esc` or the site's own control.
+- **YouTube Shorts wheel navigation** — scroll the mouse wheel to move between Shorts.
 - **Zoom controls** — `Ctrl+=` / `Ctrl+-` / `Ctrl+0` per tab.
 - **Find in page** (`Ctrl+F`).
-- **Full screen** (`F11`).
+
+> **A note on Picture-in-Picture:** QtWebEngine deliberately disables Chromium's native PiP surface ([QTBUG-82390](https://bugreports.qt.io/browse/QTBUG-82390)), so `requestPictureInPicture()` does nothing in any Qt-based browser. This mini-player is a Qt-side implementation instead: it re-opens the current video in a stay-on-top window and synchronises the timestamp both ways. Playback re-seeks to the position rather than being frame-continuous, and DRM/encrypted streams (e.g. Netflix) can't be detached this way.
 
 ### Privacy & Security
 - **Ad blocker** — loads EasyList on first run (66,000+ filters). Tries three mirrors automatically. Auto-refreshes weekly. Netflix/DRM domains are always whitelisted.
@@ -53,6 +70,24 @@ Use of this software constitutes acceptance of the terms defined in **LICENSE.tx
 ### Developer Tools
 - **DevTools panel** (`Ctrl+Shift+I`) — full Chromium inspector docked to the bottom.
 - **JS console** — execute JavaScript against the current page with command history (↑/↓).
+
+---
+
+## 🎨 Design language
+
+A consistent dark-industrial aesthetic, shared across the toolset:
+
+| Token | Hex | Role |
+|---|---|---|
+| Obsidian | `#0b0f14` | Base background |
+| Panel | `#0e141b` | Raised surfaces / cards |
+| Border | `#1c2733` | Hairlines |
+| Teal | `#2fd6c3` | Primary accent |
+| Amber | `#ffb454` | Secondary accent |
+| Phosphor | `#4be08a` | Live / secure state |
+| Red | `#ff5c66` | Danger / close |
+
+Typography is **JetBrains Mono** (falling back to Cascadia Mono → Consolas → monospace). Controls are flat and zero-radius with 1px steel hairlines; speed-dial tiles use corner brackets, and status readouts follow a HUD/systems-monitor style.
 
 ---
 
@@ -100,7 +135,12 @@ Python 3.11+
 
 ### pip packages
 ```bash
-pip install PyQt6 PyQt6-WebEngine PyQt6-WebEngineWidgets cryptography requests urllib3
+pip install PyQt6 PyQt6-WebEngine cryptography requests urllib3
+```
+
+Pinned versions are in `requirements.txt`:
+```bash
+pip install -r requirements.txt
 ```
 
 ### Plugin-specific (optional)
@@ -226,7 +266,7 @@ Settings are stored in `src/settings.json` and managed via the menus. Available 
 | `ad_blocker_enabled` | `true` | Enable/disable EasyList ad blocking |
 | `autofill_enabled` | `true` | Auto-capture and fill login credentials |
 | `tor_enabled` | `false` | Route new-tab embedded browsers through Tor (localhost:9050) |
-| `dark_mode` | `true` | Dark/light Qt theme |
+| `dark_mode` | `true` | Signature dark theme (off = default light Qt theme) |
 
 ---
 

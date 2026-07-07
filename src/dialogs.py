@@ -48,7 +48,7 @@ class HistoryDialog(QDialog):
         self.search_box.textChanged.connect(self._filter)
         self.search_box.setClearButtonEnabled(True)
         clear_btn = QPushButton("Clear All History")
-        clear_btn.setStyleSheet("color: #ef4444;")
+        clear_btn.setStyleSheet("color: #ff5c66;")
         clear_btn.clicked.connect(self._clear_all)
         top.addWidget(self.search_box, 1)
         top.addWidget(clear_btn)
@@ -444,7 +444,7 @@ class NoteSidebar(QWidget):
         title = QLabel("📝  Notes")
         title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         self.domain_label = QLabel("")
-        self.domain_label.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        self.domain_label.setStyleSheet("color: #7d8b99; font-size: 11px; letter-spacing: 1px;")
         header.addWidget(title)
         header.addStretch()
         header.addWidget(self.domain_label)
@@ -462,9 +462,9 @@ class NoteSidebar(QWidget):
         self.global_btn.clicked.connect(self._switch_to_global)
         for b in (self.page_btn, self.global_btn):
             b.setStyleSheet("""
-                QPushButton { border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-                              padding: 3px 10px; font-size: 12px; background: transparent; }
-                QPushButton:checked { background: rgba(99,102,241,0.35); border-color: #6366f1; }
+                QPushButton { border: 1px solid #1c2733; border-radius: 0px;
+                              padding: 4px 12px; font-size: 12px; background: transparent; color: #7d8b99; }
+                QPushButton:checked { background: #0e141b; border-color: #2fd6c3; color: #2fd6c3; }
             """)
             tabs.addWidget(b)
         layout.addLayout(tabs)
@@ -481,8 +481,8 @@ class NoteSidebar(QWidget):
         line.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(line)
 
-        note_list_label = QLabel("All Note Pages")
-        note_list_label.setStyleSheet("font-size: 11px; color: #64748b;")
+        note_list_label = QLabel("ALL NOTE PAGES")
+        note_list_label.setStyleSheet("font-size: 10px; color: #4d5b68; letter-spacing: 2px;")
         layout.addWidget(note_list_label)
 
         from PyQt6.QtWidgets import QListWidget

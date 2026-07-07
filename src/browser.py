@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QTabWidget, QMenu, QStatusBar, QListWidget,
     QDockWidget, QFileDialog, QInputDialog, QLabel,
     QTableWidget, QTableWidgetItem, QMessageBox, QDialog, QVBoxLayout,
-    QApplication, QWidget, QHBoxLayout
+    QApplication, QWidget, QHBoxLayout, QSizeGrip
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import (
@@ -33,7 +33,7 @@ from PyQt6.QtWebEngineCore import (
     QWebEngineScript, QWebEngineSettings
 )
 from PyQt6.QtWebChannel import QWebChannel
-from PyQt6.QtCore import QUrl, Qt, QDateTime, QObject, pyqtSlot, pyqtSignal
+from PyQt6.QtCore import QUrl, Qt, QDateTime, QObject, pyqtSlot, pyqtSignal, QPoint
 from PyQt6.QtGui import QAction, QIcon, QKeySequence, QPalette, QColor, QFont
 
 from interceptors import Plugin, ChainedInterceptor, AdBlockInterceptor
@@ -69,37 +69,47 @@ READER_JS = r"""
     <style>
         body {
             font-family: Georgia, 'Times New Roman', serif;
-            background: #1a1a2e;
-            color: #e2e0d8;
+            background: #0b0f14;
+            color: #cdd6df;
             max-width: 720px;
-            margin: 60px auto;
+            margin: 64px auto;
             padding: 0 24px 80px;
             font-size: 19px;
-            line-height: 1.8;
+            line-height: 1.85;
         }
-        h1,h2,h3,h4 { font-family: system-ui, sans-serif; color: #f1f0ea; }
-        h1 { font-size: 2em; margin-bottom: 0.3em; }
-        a { color: #818cf8; }
-        img { max-width: 100%; border-radius: 8px; }
-        pre, code { background: #2d2d44; border-radius: 6px; padding: 2px 6px; font-size: 0.85em; }
-        blockquote { border-left: 3px solid #6366f1; margin-left: 0; padding-left: 20px; color: #94a3b8; }
+        h1,h2,h3,h4 { font-family: 'JetBrains Mono','Cascadia Mono',Consolas,monospace;
+                      color: #e6edf3; letter-spacing: -0.5px; }
+        h1 { font-size: 1.9em; margin-bottom: 0.3em; border-bottom: 1px solid #1c2733; padding-bottom: 0.3em; }
+        a { color: #2fd6c3; text-decoration: none; }
+        a:hover { text-decoration: underline; text-decoration-color: #ffb454; }
+        img { max-width: 100%; border: 1px solid #1c2733; }
+        pre, code { background: #0e141b; border: 1px solid #1c2733; padding: 2px 6px;
+                    font-family: 'JetBrains Mono','Cascadia Mono',Consolas,monospace; font-size: 0.85em;
+                    color: #4be08a; }
+        blockquote { border-left: 2px solid #2fd6c3; margin-left: 0; padding-left: 20px; color: #7d8b99; }
+        ::selection { background: #2fd6c3; color: #05201c; }
         #reader-bar { position: fixed; top: 0; left: 0; right: 0; padding: 10px 24px;
-                      background: rgba(15,17,23,0.9); backdrop-filter: blur(10px);
-                      display: flex; align-items: center; gap: 16px; z-index: 9999;
-                      border-bottom: 1px solid rgba(255,255,255,0.1); }
-        #reader-bar span { font-family: system-ui; font-size: 13px; color: #64748b; flex: 1; }
-        #exit-reader { font-family: system-ui; font-size: 12px; padding: 5px 14px;
-                       background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        #font-dec, #font-inc { font-family: system-ui; font-size: 14px; padding: 4px 10px;
-                               background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-                               color: #e2e8f0; border-radius: 6px; cursor: pointer; }
+                      background: rgba(8,11,15,0.94); backdrop-filter: blur(8px);
+                      display: flex; align-items: center; gap: 14px; z-index: 9999;
+                      border-bottom: 1px solid #1c2733;
+                      font-family: 'JetBrains Mono','Cascadia Mono',Consolas,monospace; }
+        #reader-bar span { font-size: 12px; color: #7d8b99; flex: 1; letter-spacing: 1px;
+                           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #reader-bar .rtag { color: #ffb454; }
+        #exit-reader { font-family: inherit; font-size: 12px; padding: 5px 14px;
+                       background: #2fd6c3; color: #05201c; border: none; cursor: pointer; letter-spacing: 1px; }
+        #exit-reader:hover { background: #4be08a; }
+        #font-dec, #font-inc { font-family: inherit; font-size: 13px; padding: 4px 11px;
+                               background: #0e141b; border: 1px solid #253341;
+                               color: #7d8b99; cursor: pointer; }
+        #font-dec:hover, #font-inc:hover { border-color: #2fd6c3; color: #e6edf3; }
     </style>
     </head><body>
     <div id="reader-bar">
-        <span>📖 Reading Mode — ${title}</span>
+        <span><span class="rtag">// READER</span> &nbsp; ${title}</span>
         <button id="font-dec" onclick="document.body.style.fontSize=Math.max(14,parseInt(getComputedStyle(document.body).fontSize)-2)+'px'">A−</button>
         <button id="font-inc" onclick="document.body.style.fontSize=Math.min(28,parseInt(getComputedStyle(document.body).fontSize)+2)+'px'">A+</button>
-        <button id="exit-reader" onclick="history.back()">Exit Reader</button>
+        <button id="exit-reader" onclick="history.back()">EXIT</button>
     </div>
     <div style="margin-top:60px">
     <h1>${title}</h1>
@@ -114,107 +124,310 @@ READER_JS = r"""
 # Dark mode stylesheet  (applied to the Qt chrome, not the web content)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Signature dark-industrial theme — obsidian / teal / amber / phosphor / red,
+# JetBrains Mono typography, flat zero-radius chrome. Consistent with the rest
+# of the 7h3v01d toolset (SQLite Workbench, Markdown Editor Pro, WinSAT Viewer).
+#
+#   obsidian  #0b0f14   panel  #0e141b   input  #11171f   hover  #16202b
+#   border    #1c2733   steel  #253341
+#   teal      #2fd6c3   amber  #ffb454   phosphor #4be08a  red    #ff5c66
+#   text      #e6edf3   dim    #7d8b99   muted  #4d5b68
+#   font      'JetBrains Mono' → 'Cascadia Mono' → Consolas → monospace
+# ─────────────────────────────────────────────────────────────────────────────
+
 DARK_QSS = """
+* {
+    font-family: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+}
 QMainWindow, QDialog, QWidget {
-    background-color: #0f1117;
-    color: #e2e8f0;
+    background-color: #0b0f14;
+    color: #e6edf3;
 }
 QMenuBar {
-    background-color: #0f1117;
-    color: #e2e8f0;
-    border-bottom: 1px solid #1e2130;
+    background-color: #080b0f;
+    color: #7d8b99;
+    border-bottom: 1px solid #1c2733;
+    padding: 2px 4px;
 }
-QMenuBar::item:selected { background: #1e2130; }
-QMenu { background-color: #1a1d28; color: #e2e8f0; border: 1px solid #2d3148; }
-QMenu::item:selected { background-color: #6366f1; }
+QMenuBar::item { padding: 4px 12px; background: transparent; }
+QMenuBar::item:selected { background: #16202b; color: #e6edf3; }
+QMenu {
+    background-color: #0e141b;
+    color: #e6edf3;
+    border: 1px solid #1c2733;
+    padding: 4px;
+}
+QMenu::item { padding: 5px 22px 5px 14px; }
+QMenu::item:selected { background-color: #2fd6c3; color: #05201c; }
+QMenu::separator { height: 1px; background: #1c2733; margin: 4px 6px; }
 QToolBar {
-    background-color: #0f1117;
-    border-bottom: 1px solid #1e2130;
-    spacing: 4px;
-    padding: 4px 6px;
+    background-color: #0b0f14;
+    border-bottom: 1px solid #1c2733;
+    spacing: 6px;
+    padding: 8px;
 }
+QToolBar::separator { background: #1c2733; width: 1px; margin: 4px 2px; }
 QPushButton {
-    background-color: #1e2130;
-    color: #e2e8f0;
-    border: 1px solid #2d3148;
-    border-radius: 6px;
-    padding: 4px 10px;
+    background-color: #0e141b;
+    color: #7d8b99;
+    border: 1px solid #1c2733;
+    border-radius: 0px;
+    padding: 6px 12px;
     font-size: 13px;
     min-width: 28px;
 }
-QPushButton:hover { background-color: #2d3148; border-color: #6366f1; }
-QPushButton:pressed { background-color: #6366f1; color: white; }
-QPushButton:checked { background-color: #6366f1; color: white; border-color: #4f46e5; }
+QPushButton:hover { background-color: #16202b; border-color: #253341; color: #e6edf3; }
+QPushButton:pressed { background-color: #2fd6c3; color: #05201c; border-color: #2fd6c3; }
+QPushButton:checked { background-color: #0e141b; color: #2fd6c3; border-color: #2fd6c3; }
+QPushButton:disabled { color: #4d5b68; border-color: #131a22; }
 QLineEdit {
-    background-color: #1a1d28;
-    color: #f1f5f9;
-    border: 1px solid #2d3148;
-    border-radius: 8px;
-    padding: 5px 10px;
+    background-color: #11171f;
+    color: #e6edf3;
+    border: 1px solid #1c2733;
+    border-radius: 0px;
+    padding: 6px 12px;
     font-size: 13px;
-    selection-background-color: #6366f1;
+    selection-background-color: #2fd6c3;
+    selection-color: #05201c;
 }
-QLineEdit:focus { border-color: #6366f1; }
-QTabWidget::pane { border-top: 2px solid #6366f1; background: #0f1117; }
+QLineEdit:focus { border-color: #2fd6c3; }
+QComboBox, QSpinBox {
+    background-color: #11171f;
+    color: #e6edf3;
+    border: 1px solid #1c2733;
+    border-radius: 0px;
+    padding: 5px 10px;
+}
+QComboBox:focus, QSpinBox:focus { border-color: #2fd6c3; }
+QComboBox QAbstractItemView {
+    background-color: #0e141b;
+    border: 1px solid #1c2733;
+    selection-background-color: #2fd6c3;
+    selection-color: #05201c;
+}
+QTabWidget::pane { border: none; border-top: 1px solid #1c2733; background: #0b0f14; }
 QTabBar::tab {
-    background: #1a1d28;
-    color: #94a3b8;
-    padding: 6px 16px;
-    border-radius: 4px 4px 0 0;
+    background: #080b0f;
+    color: #7d8b99;
+    padding: 7px 18px;
+    border: 1px solid #1c2733;
+    border-bottom: 2px solid transparent;
     margin-right: 2px;
     font-size: 12px;
-    max-width: 200px;
+    max-width: 220px;
 }
-QTabBar::tab:selected { background: #6366f1; color: white; }
-QTabBar::tab:hover:!selected { background: #2d3148; color: #e2e8f0; }
+QTabBar::tab:selected {
+    background: #0e141b;
+    color: #e6edf3;
+    border-bottom: 2px solid #2fd6c3;
+}
+QTabBar::tab:hover:!selected { background: #16202b; color: #e6edf3; }
 QStatusBar {
-    background-color: #0a0c12;
-    color: #64748b;
+    background-color: #080b0f;
+    color: #4be08a;
     font-size: 11px;
-    border-top: 1px solid #1e2130;
+    border-top: 1px solid #1c2733;
 }
-QDockWidget { color: #e2e8f0; font-weight: bold; }
-QDockWidget::title { background: #1a1d28; padding: 4px 8px; }
+QStatusBar::item { border: none; }
+QDockWidget { color: #7d8b99; font-weight: bold; titlebar-close-icon: none; }
+QDockWidget::title {
+    background: #080b0f;
+    color: #7d8b99;
+    padding: 6px 10px;
+    border-bottom: 1px solid #1c2733;
+    letter-spacing: 1px;
+}
 QTableWidget, QListWidget, QTreeWidget {
-    background-color: #13151f;
-    color: #e2e8f0;
-    border: 1px solid #2d3148;
-    gridline-color: #1e2130;
-    alternate-background-color: #181b27;
+    background-color: #0b0f14;
+    color: #e6edf3;
+    border: 1px solid #1c2733;
+    gridline-color: #131a22;
+    alternate-background-color: #0e141b;
+    selection-background-color: #16202b;
+    selection-color: #2fd6c3;
+    outline: none;
 }
+QListWidget::item, QTreeWidget::item { padding: 3px 2px; }
+QListWidget::item:selected, QTreeWidget::item:selected,
+QTableWidget::item:selected { background: #16202b; color: #2fd6c3; }
 QHeaderView::section {
-    background-color: #1e2130;
-    color: #94a3b8;
-    border: 1px solid #2d3148;
-    padding: 4px 8px;
+    background-color: #080b0f;
+    color: #7d8b99;
+    border: none;
+    border-right: 1px solid #1c2733;
+    border-bottom: 1px solid #1c2733;
+    padding: 6px 10px;
     font-size: 12px;
+    letter-spacing: 1px;
 }
-QScrollBar:vertical {
-    background: #13151f; width: 8px; border-radius: 4px;
-}
-QScrollBar::handle:vertical {
-    background: #2d3148; border-radius: 4px; min-height: 20px;
-}
-QScrollBar::handle:vertical:hover { background: #6366f1; }
-QTextEdit {
-    background-color: #13151f;
-    color: #e2e8f0;
-    border: 1px solid #2d3148;
-    border-radius: 6px;
-    selection-background-color: #6366f1;
+QScrollBar:vertical { background: #080b0f; width: 10px; margin: 0; }
+QScrollBar::handle:vertical { background: #253341; min-height: 24px; }
+QScrollBar::handle:vertical:hover { background: #2fd6c3; }
+QScrollBar:horizontal { background: #080b0f; height: 10px; margin: 0; }
+QScrollBar::handle:horizontal { background: #253341; min-width: 24px; }
+QScrollBar::handle:horizontal:hover { background: #2fd6c3; }
+QScrollBar::add-line, QScrollBar::sub-line { height: 0; width: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+QTextEdit, QPlainTextEdit {
+    background-color: #0b0f14;
+    color: #e6edf3;
+    border: 1px solid #1c2733;
+    border-radius: 0px;
+    selection-background-color: #2fd6c3;
+    selection-color: #05201c;
 }
 QProgressBar {
-    background-color: #1e2130;
-    border: 1px solid #2d3148;
-    border-radius: 4px;
+    background-color: #11171f;
+    border: 1px solid #1c2733;
+    border-radius: 0px;
     text-align: center;
-    color: #e2e8f0;
+    color: #e6edf3;
+    font-size: 11px;
 }
-QProgressBar::chunk { background-color: #6366f1; border-radius: 4px; }
-QSplitter::handle { background: #2d3148; }
+QProgressBar::chunk { background-color: #2fd6c3; }
+QSplitter::handle { background: #1c2733; }
+QCheckBox { color: #e6edf3; spacing: 8px; }
+QCheckBox::indicator {
+    width: 15px; height: 15px;
+    border: 1px solid #253341; background: #11171f;
+}
+QCheckBox::indicator:checked { background: #2fd6c3; border-color: #2fd6c3; }
+QLabel { color: #e6edf3; background: transparent; }
+QToolTip {
+    background-color: #0e141b;
+    color: #e6edf3;
+    border: 1px solid #2fd6c3;
+    padding: 4px 8px;
+}
 """
 
 LIGHT_QSS = ""   # Use Qt default light palette
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Picture-in-Picture JS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Page enhancements injected on every load.
+#   • YouTube Shorts wheel navigation — the embedded engine doesn't wire the
+#     wheel to Shorts nav, so translate wheel → next/prev (button click, with a
+#     synthetic arrow-key fallback).
+# (Picture-in-Picture is handled Qt-side via a floating window — native
+#  requestPictureInPicture() resolves but doesn't render in this engine build.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+PAGE_ENHANCE_JS = r"""
+(function () {
+    if (window.__browserEnhanced) return;
+    window.__browserEnhanced = true;
+
+    function reelItems() {
+        return Array.prototype.slice.call(
+            document.querySelectorAll('ytd-reel-video-renderer')
+        );
+    }
+
+    // Which reel is currently centered in the viewport
+    function activeIndex(items) {
+        var mid = window.innerHeight / 2;
+        for (var i = 0; i < items.length; i++) {
+            var r = items[i].getBoundingClientRect();
+            if (r.top <= mid && r.bottom >= mid) return i;
+        }
+        return 0;
+    }
+
+    var cooling = false;
+    window.addEventListener('wheel', function (e) {
+        if (location.pathname.indexOf('/shorts') !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (cooling) return;
+        cooling = true;
+        setTimeout(function () { cooling = false; }, 450);
+
+        var down = e.deltaY > 0;
+        var items = reelItems();
+
+        // Primary: scroll the adjacent reel into view (a real, trusted scroll)
+        if (items.length) {
+            var idx = activeIndex(items);
+            var target = items[idx + (down ? 1 : -1)];
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+        }
+
+        // Fallback 1: click YouTube's nav button if present
+        var btn = document.querySelector(
+            down ? '#navigation-button-down button, [aria-label="Next video"]'
+                 : '#navigation-button-up button, [aria-label="Previous video"]'
+        );
+        if (btn) { btn.click(); return; }
+
+        // Fallback 2: synthetic arrow key (last resort)
+        var key = down ? 'ArrowDown' : 'ArrowUp';
+        var kc = down ? 40 : 38;
+        ['keydown', 'keyup'].forEach(function (t) {
+            document.dispatchEvent(new KeyboardEvent(t, {
+                key: key, code: key, keyCode: kc, which: kc, bubbles: true, cancelable: true
+            }));
+        });
+    }, { passive: false, capture: true });
+})();
+"""
+
+# Detects the current video and returns JSON describing how to re-open it in a
+# floating mini-player. YouTube uses a blob/MSE src, so we key off the video id
+# and current timestamp; direct file sources can be replayed as-is.
+PIP_DETECT_JS = r"""
+(function () {
+    try {
+        var vids = Array.prototype.slice.call(document.querySelectorAll('video'))
+            .filter(function (v) { return v.readyState > 0 || v.currentSrc || v.src; });
+        if (!vids.length) return JSON.stringify({ ok: false });
+
+        var v = vids.filter(function (x) { return !x.paused && !x.ended; })[0];
+        if (!v) {
+            v = vids.sort(function (a, b) {
+                return (b.videoWidth * b.videoHeight) - (a.videoWidth * a.videoHeight);
+            })[0];
+        }
+
+        var host = location.hostname;
+        var out = {
+            ok: true,
+            time: Math.floor(v.currentTime || 0),
+            src: v.currentSrc || v.src || '',
+            page: location.href,
+            host: host
+        };
+
+        try {
+            if (host.indexOf('youtube.') >= 0) {
+                var id = new URLSearchParams(location.search).get('v');
+                if (!id && location.pathname.indexOf('/shorts/') === 0) {
+                    id = location.pathname.split('/shorts/')[1].split('/')[0];
+                }
+                if (!id) {
+                    var m = location.pathname.match(/\/embed\/([^/?]+)/);
+                    if (m) id = m[1];
+                }
+                if (id) out.yt = id;
+            } else if (host.indexOf('youtu.be') >= 0) {
+                out.yt = location.pathname.slice(1);
+            }
+        } catch (e) {}
+
+        try { v.pause(); } catch (e) {}
+        return JSON.stringify(out);
+    } catch (e) {
+        return JSON.stringify({ ok: false, err: String(e) });
+    }
+})();
+"""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -281,6 +494,137 @@ SETTINGS_FILE = "settings.json"
 CONSOLE_HIST  = "console_history.json"
 
 
+# Injected into the PiP mini-player when it shows a YouTube watch page — hides
+# the masthead, sidebar and comments so it reads as a compact player. CSS is
+# declarative so it still applies to elements YouTube adds later (SPA build).
+YT_ISOLATE_JS = r"""
+(function () {
+    if (location.hostname.indexOf('youtube.') < 0) return;
+    var css =
+        '#masthead-container,ytd-masthead,#secondary,#secondary-inner,#below,' +
+        'ytd-comments,#chat,#guide,tp-yt-app-drawer,#merch-shelf,ytd-merch-shelf-renderer,' +
+        '#related,#meta,#meta-contents{display:none!important}' +
+        '#primary,#primary-inner,#columns,#page-manager{margin:0!important;padding:0!important}' +
+        'ytd-watch-flexy #primary{max-width:100%!important}' +
+        'html,body{overflow:hidden!important;background:#000!important}';
+    var s = document.createElement('style');
+    s.textContent = css;
+    (document.head || document.documentElement).appendChild(s);
+    try { window.scrollTo(0, 0); } catch (e) {}
+})();
+"""
+
+
+class PipWindow(QWidget):
+    """Frameless, always-on-top floating mini-player used as Picture-in-Picture.
+
+    The embedded engine won't render native PiP, so instead of detaching the
+    live <video> we re-open the current video (YouTube embed at timestamp, or a
+    direct file source) in a small stay-on-top window. Draggable by its bar,
+    resizable via the corner grip.
+    """
+
+    closed = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(
+            None,
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool,
+        )
+        self.setWindowTitle("Picture-in-Picture")
+        self.resize(420, 260)
+        self.setMinimumSize(240, 150)
+        self._drag_offset = None
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(1, 1, 1, 1)
+        root.setSpacing(0)
+
+        # ── Title bar (drag handle + controls) ──
+        self.bar = QWidget()
+        self.bar.setFixedHeight(26)
+        self.bar.setStyleSheet(
+            "background:#080b0f; border-bottom:1px solid #1c2733;"
+        )
+        bar_l = QHBoxLayout(self.bar)
+        bar_l.setContentsMargins(10, 0, 6, 0)
+        bar_l.setSpacing(6)
+
+        tag = QLabel("// PiP")
+        tag.setStyleSheet(
+            "color:#2fd6c3; font-family:'JetBrains Mono','Cascadia Mono',Consolas,monospace;"
+            "font-size:10px; letter-spacing:2px; background:transparent;"
+        )
+        bar_l.addWidget(tag)
+        bar_l.addStretch(1)
+
+        self.return_btn = QPushButton("\u2197")   # open-in-tab / return
+        self.return_btn.setToolTip("Return to tab")
+        self.close_btn = QPushButton("\u00d7")
+        self.close_btn.setToolTip("Close")
+        for b, color in ((self.return_btn, "#2fd6c3"), (self.close_btn, "#ff5c66")):
+            b.setFixedSize(18, 18)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setStyleSheet(
+                "QPushButton { background:#0e141b; border:1px solid #1c2733; border-radius:0px;"
+                f" color:{color}; font-family:'JetBrains Mono',Consolas,monospace; font-size:12px; padding:0; }}"
+                f"QPushButton:hover {{ border-color:{color}; }}"
+            )
+            bar_l.addWidget(b)
+        self.return_btn.setToolTip("Return to tab (resume here)")
+        self.close_btn.setToolTip("Close (keep tab position)")
+
+        root.addWidget(self.bar)
+
+        # ── Video view ──
+        self.view = QWebEngineView(self)
+        self.view.loadFinished.connect(self._on_loaded)
+        root.addWidget(self.view, 1)
+
+        # ── Resize grip ──
+        grip_row = QHBoxLayout()
+        grip_row.setContentsMargins(0, 0, 0, 0)
+        grip_row.addStretch(1)
+        grip = QSizeGrip(self)
+        grip_row.addWidget(grip)
+        root.addLayout(grip_row)
+
+        self.setStyleSheet("PipWindow { background:#0b0f14; border:1px solid #2fd6c3; }")
+
+    def load_url(self, url: str):
+        self.view.load(QUrl(url))
+
+    def load_html(self, html: str, base_url: str = ""):
+        # base_url gives the document a real origin for direct media playback.
+        self.view.setHtml(html, QUrl(base_url) if base_url else QUrl())
+
+    def _on_loaded(self, ok):
+        if ok:
+            self.view.page().runJavaScript(YT_ISOLATE_JS)
+
+    # Drag the window by its title bar
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.bar.underMouse():
+            self._drag_offset = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._drag_offset is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            self.move(event.globalPosition().toPoint() - self._drag_offset)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self._drag_offset = None
+
+    def closeEvent(self, event):
+        # Stop playback so audio doesn't linger after closing
+        self.view.setUrl(QUrl("about:blank"))
+        self.closed.emit()
+        super().closeEvent(event)
+
+
 class WebBrowser(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -294,6 +638,9 @@ class WebBrowser(QMainWindow):
         self.plugins     = []
         self.tor_enabled = False
         self.vault       = None
+        self._pip        = None   # floating Picture-in-Picture window
+        self._pip_source = None   # tab the PiP video came from (for handover)
+        self._pip_finishing = False
         self.autofill_enabled = True
         self.dark_mode   = True    # default dark
         self.reading_mode_active = False
@@ -466,6 +813,12 @@ class WebBrowser(QMainWindow):
         self.theme_btn.clicked.connect(self.toggle_dark_mode)
         self.toolbar.addWidget(self.theme_btn)
 
+        # Picture-in-Picture
+        self.pip_btn = QPushButton("⧉")
+        self.pip_btn.setToolTip("Picture-in-Picture  (Ctrl+Shift+P)")
+        self.pip_btn.clicked.connect(self.toggle_pip)
+        self.toolbar.addWidget(self.pip_btn)
+
     # ─────────────────────────────────────────────────────────────────────
     # Menus
     # ─────────────────────────────────────────────────────────────────────
@@ -487,6 +840,7 @@ class WebBrowser(QMainWindow):
         self._add_action(view_menu, "Show Downloads", self.show_download_manager, "Ctrl+J")
         self._add_action(view_menu, "Show Notes", self.toggle_notes, "Ctrl+Shift+N")
         view_menu.addSeparator()
+        self._add_action(view_menu, "Picture-in-Picture", self.toggle_pip, "Ctrl+Shift+P")
         self._add_action(view_menu, "Reading Mode", self.toggle_reading_mode, "Ctrl+Shift+R")
         self._add_action(view_menu, "Toggle Dark Mode", self.toggle_dark_mode, "Ctrl+Shift+D")
         view_menu.addSeparator()
@@ -582,6 +936,8 @@ class WebBrowser(QMainWindow):
         page.runJavaScript(QWEBCHANNEL_JS_CODE)
         page.loadFinished.connect(lambda ok: self.on_load_finished(ok, browser))
         page.certificateError.connect(lambda error: self.handle_certificate_error(error, browser))
+        # HTML5 fullscreen (YouTube etc.) — accept the page's request and go real fullscreen
+        page.fullScreenRequested.connect(self._handle_fullscreen_request)
         # Handle "open in new tab / new window" from right-click menus
         page.createWindow = lambda _win_type: self._create_window()
         browser.urlChanged.connect(self.update_urlbar)
@@ -608,6 +964,8 @@ class WebBrowser(QMainWindow):
 
     def on_load_finished(self, ok, browser):
         self.update_ssl_indicator(ok, browser)
+        # Inject page-level enhancements (in-page PiP hotkey, Shorts wheel nav)
+        browser.page().runJavaScript(PAGE_ENHANCE_JS)
         if browser == self.tabs.currentWidget():
             url_str = browser.url().toString()
             # Record history
@@ -717,6 +1075,124 @@ class WebBrowser(QMainWindow):
         self.statusBar.showMessage("Reading mode activated", 3000)
 
     # ─────────────────────────────────────────────────────────────────────
+    # Picture-in-Picture
+    # ─────────────────────────────────────────────────────────────────────
+
+    def toggle_pip(self):
+        """Open (or close) the floating Picture-in-Picture mini-player.
+
+        Native PiP doesn't render in this engine, so we re-open the current
+        video in a stay-on-top window: YouTube via its embed URL at the current
+        timestamp, direct file sources as-is. DRM/streamed (blob/MSE) sources
+        can't be detached — we say so rather than fail silently.
+        """
+        if getattr(self, "_pip", None) is not None and self._pip.isVisible():
+            self._finish_pip(resume=False)
+            return
+        if self.tabs.count() == 0:
+            return
+        self.tabs.currentWidget().page().runJavaScript(PIP_DETECT_JS, self._open_pip)
+
+    def _open_pip(self, result):
+        try:
+            data = json.loads(result) if result else {}
+        except Exception:
+            data = {}
+
+        if not data.get("ok"):
+            self.statusBar.showMessage("No playable video found for Picture-in-Picture.", 4000)
+            return
+
+        html = None
+        base = ""
+        yt_url = None
+        src = data.get("src", "")
+        if data.get("yt"):
+            start = int(data.get("time", 0) or 0)
+            # Full watch page (not /embed/) — avoids the embed origin error 153.
+            # Chrome is stripped after load by YT_ISOLATE_JS to keep it compact.
+            yt_url = f"https://www.youtube.com/watch?v={data['yt']}&t={start}s"
+        elif src.startswith("http") and not src.startswith("blob:"):
+            html = (
+                "<html><body style='margin:0;background:#000;height:100vh'>"
+                f"<video src='{src}' autoplay controls "
+                "style='width:100%;height:100%;object-fit:contain'></video>"
+                "</body></html>"
+            )
+        else:
+            self.statusBar.showMessage(
+                "This video's stream is DRM/encrypted and can't be popped out.", 5000
+            )
+            return
+
+        if getattr(self, "_pip", None) is None:
+            self._pip = PipWindow(self)
+            self._pip.return_btn.clicked.connect(lambda: self._finish_pip(resume=True))
+            self._pip.close_btn.clicked.connect(lambda: self._finish_pip(resume=False))
+            self._pip.closed.connect(lambda: self.statusBar.showMessage("Picture-in-Picture closed.", 2500))
+        self._pip_source = self.tabs.currentWidget()   # video handed back here on exit
+        if yt_url:
+            self._pip.load_url(yt_url)
+        else:
+            self._pip.load_html(html, base)
+        self._pip.show()
+        self._pip.raise_()
+        self._pip.activateWindow()
+        self.statusBar.showMessage("Picture-in-Picture opened — floating on top.", 3000)
+
+    def _view_alive(self, view):
+        """True if the given web view is still one of the open tabs."""
+        if view is None:
+            return False
+        for i in range(self.tabs.count()):
+            if self.tabs.widget(i) is view:
+                return True
+        return False
+
+    def _finish_pip(self, resume: bool):
+        """Hand the popout's playback position back to the source tab, then close.
+
+        This is the 'handover' half of PiP: we read where the mini-player is now,
+        seek the tab's video to that exact spot, and (when returning) resume it
+        there and refocus the tab — so closing feels continuous rather than like
+        two separate players.
+        """
+        if getattr(self, "_pip", None) is None:
+            return
+        if getattr(self, "_pip_finishing", False):
+            return
+        self._pip_finishing = True
+
+        source = getattr(self, "_pip_source", None)
+
+        def _hand_back(t):
+            try:
+                t = int(t)
+            except (TypeError, ValueError):
+                t = -1
+            if t >= 0 and self._view_alive(source):
+                play = "v.play();" if resume else ""
+                source.page().runJavaScript(
+                    f"(function(){{var v=document.querySelector('video');"
+                    f"if(v){{v.currentTime={t};{play}}}}})();"
+                )
+                if resume:
+                    idx = self.tabs.indexOf(source)
+                    if idx >= 0:
+                        self.tabs.setCurrentIndex(idx)
+            self._pip_source = None
+            self._pip_finishing = False
+            if getattr(self, "_pip", None) is not None:
+                self._pip.close()
+
+        # Read the popout's current time while its page is still live
+        self._pip.view.page().runJavaScript(
+            "(function(){var v=document.querySelector('video');"
+            "return v?Math.floor(v.currentTime):-1;})();",
+            _hand_back,
+        )
+
+    # ─────────────────────────────────────────────────────────────────────
     # Notes sidebar
     # ─────────────────────────────────────────────────────────────────────
 
@@ -742,11 +1218,44 @@ class WebBrowser(QMainWindow):
             if ok and text:
                 self.tabs.currentWidget().findText(text)
 
-    def toggle_fullscreen(self):
-        if self.isFullScreen():
-            self.showNormal()
+    def _handle_fullscreen_request(self, request):
+        """Accept an HTML5 fullscreen request from web content (YouTube, etc.)."""
+        request.accept()
+        if request.toggleOn():
+            self._enter_fullscreen()
         else:
-            self.showFullScreen()
+            self._exit_fullscreen()
+
+    def _enter_fullscreen(self):
+        if getattr(self, "_is_fs", False):
+            return
+        self._is_fs = True
+        self._fs_was_max = self.isMaximized()
+        self.menuBar().hide()
+        self.toolbar.hide()
+        self.tabs.tabBar().hide()
+        self.statusBar.hide()
+        self.showFullScreen()
+
+    def _exit_fullscreen(self):
+        if not getattr(self, "_is_fs", False):
+            return
+        self._is_fs = False
+        self.menuBar().show()
+        self.toolbar.show()
+        self.tabs.tabBar().show()
+        self.statusBar.show()
+        if getattr(self, "_fs_was_max", False):
+            self.showMaximized()
+        else:
+            self.showNormal()
+
+    def toggle_fullscreen(self):
+        """F11 — manual fullscreen toggle (shares state with HTML5 fullscreen)."""
+        if getattr(self, "_is_fs", False) or self.isFullScreen():
+            self._exit_fullscreen()
+        else:
+            self._enter_fullscreen()
 
     def print_page(self):
         if self.tabs.count() > 0:
