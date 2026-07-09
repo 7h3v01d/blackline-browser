@@ -62,8 +62,10 @@ if __name__ == "__main__":
                           ' --disable-logging')
 
     app = QApplication(sys.argv)
-    app.setApplicationName("Browser")
-    app.setOrganizationName("Personal")
+    app.setApplicationName("Blackline Browser")
+    app.setApplicationDisplayName("Blackline Browser")
+    app.setOrganizationName("Blackline")
+    app.setOrganizationDomain("blackline.local")
 
     window = WebBrowser()
     window.show()
