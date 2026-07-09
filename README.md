@@ -1,4 +1,4 @@
-# 🌐 Personal Web Browser v2.0
+# 🌐 Blackline Browser
 
 A privacy-focused personal browser built on **PyQt6 + QtWebEngine**, with a signature dark-industrial UI, a speed-dial new-tab page, DRM video support, ad blocking, an encrypted password vault, and a plugin system. Built as a daily driver for personal web use.
 
