@@ -3,3 +3,4 @@ PyQt6-WebEngine==6.7.0
 requests==2.31.0
 cryptography==43.0.1
 urllib3==2.2.2
+pytest

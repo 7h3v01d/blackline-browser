@@ -38,7 +38,7 @@ from PyQt6.QtGui import QAction, QIcon, QKeySequence, QPalette, QColor, QFont
 
 from interceptors import Plugin, ChainedInterceptor, AdBlockInterceptor
 from dialogs import HistoryDialog, DevToolsDialog, PasswordManagerDialog, BookmarksDialog, NoteSidebar
-from vault import Vault, VAULT_FILE
+from vault import Vault, VAULT_FILE, UnlockResult
 from splash import VaultPasswordDialog
 from main_gui import DownloadPanel
 
@@ -718,15 +718,7 @@ class WebBrowser(QMainWindow):
         self.note_dock.hide()
 
         # ── Vault (password manager) ────────────────────────────────────────
-        password, ok = VaultPasswordDialog.ask(
-            vault_exists=os.path.exists(VAULT_FILE)
-        )
-        if ok and password:
-            self.vault = Vault(password)
-            if not self.vault.unlock_vault():
-                self.vault.create_and_lock_vault({"logins": [], "api_keys": []})
-        else:
-            self.statusBar.showMessage("Vault not initialized. Password manager disabled.", 5000)
+        self._init_vault()
 
         # ── Apply dark mode ────────────────────────────────────────────────
         self.apply_theme()
@@ -750,6 +742,57 @@ class WebBrowser(QMainWindow):
     # ─────────────────────────────────────────────────────────────────────
     # Theme
     # ─────────────────────────────────────────────────────────────────────
+
+    def _init_vault(self, attempts: int = 3):
+        """
+        Prompt for the master password and open the vault.
+
+        A wrong password must never create a new vault: create_and_lock_vault()
+        overwrites credentials.vault, so conflating "wrong password" with
+        "no vault yet" destroyed every stored credential on a single typo.
+        """
+        for remaining in range(attempts, 0, -1):
+            exists = os.path.exists(VAULT_FILE)
+            password, ok = VaultPasswordDialog.ask(vault_exists=exists)
+
+            if not (ok and password):
+                self.statusBar.showMessage(
+                    "Vault not initialized. Password manager disabled.", 5000)
+                return
+
+            vault = Vault(password)
+            result = vault.unlock_vault()
+
+            if result is UnlockResult.OK:
+                self.vault = vault
+                self.statusBar.showMessage("Vault unlocked.", 3000)
+                return
+
+            if result is UnlockResult.NO_VAULT:
+                vault.create_and_lock_vault({"logins": [], "api_keys": []})
+                self.vault = vault
+                self.statusBar.showMessage("New vault created.", 3000)
+                return
+
+            if result is UnlockResult.CORRUPT:
+                QMessageBox.critical(
+                    self, "Vault Unreadable",
+                    f"{VAULT_FILE} could not be read. It may be damaged.\n\n"
+                    f"A backup may exist at {VAULT_FILE}.bak — move it aside "
+                    "before starting a new vault, or the backup will be "
+                    "overwritten in turn.")
+                return
+
+            # WRONG_PASSWORD — re-prompt, never write.
+            if remaining > 1:
+                QMessageBox.warning(
+                    self, "Incorrect Password",
+                    f"That password did not unlock the vault. "
+                    f"{remaining - 1} attempt(s) remaining.\n\n"
+                    "Cancel to continue without the password manager.")
+
+        self.statusBar.showMessage(
+            "Vault locked after failed attempts. Password manager disabled.", 6000)
 
     def apply_theme(self):
         if self.dark_mode:

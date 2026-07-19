@@ -2,6 +2,7 @@ import sys
 import os
 import glob
 import logging
+import re
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 from browser import WebBrowser
@@ -22,7 +23,10 @@ def find_widevine_path():
     if matches:
         # Pick the highest version number
         def version_key(p):
-            for part in p.split(os.sep):
+            # Split on both separators: os.sep alone silently fails to find
+            # any version component when the separator does not match the
+            # host platform, and every path then sorts equal.
+            for part in re.split(r"[\\/]", p):
                 segments = part.split('.')
                 if len(segments) >= 2 and all(s.isdigit() for s in segments):
                     return [int(s) for s in segments]
@@ -43,12 +47,26 @@ def find_widevine_path():
     return None
 
 
-if __name__ == "__main__":
-    widevine_path = find_widevine_path()
-    flags = "--enable-proprietary-codecs"
+def build_chromium_flags(widevine_path=None):
+    """
+    Assemble QTWEBENGINE_CHROMIUM_FLAGS.
 
+    Kept as a function so it can be tested without launching Qt. The logging
+    flags were previously appended with os.environ.setdefault() on a key that
+    had already been assigned, which is a no-op — they never reached Chromium.
+    """
+    flags = ["--enable-proprietary-codecs"]
     if widevine_path:
-        flags += f' --enable-widevine --widevine-path="{widevine_path}"'
+        flags.append("--enable-widevine")
+        flags.append(f'--widevine-path="{widevine_path}"')
+    flags.append("--disable-logging")
+    flags.append("--log-level=3")
+    return " ".join(flags)
+
+
+def main():
+    widevine_path = find_widevine_path()
+    if widevine_path:
         logger.info(f"Widevine CDM found: {widevine_path}")
     else:
         logger.warning(
@@ -56,11 +74,7 @@ if __name__ == "__main__":
             "Make sure Google Chrome is installed."
         )
 
-    # Suppress the noisy Chromium/compositor log spam.
-    # NOTE: this used to use setdefault(), which was a no-op because the key
-    # had just been assigned above — so --disable-logging never applied.
-    flags += " --disable-logging --log-level=3"
-    os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = flags
+    os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = build_chromium_flags(widevine_path)
 
     app = QApplication(sys.argv)
     app.setApplicationName("Blackline Browser")
@@ -80,4 +94,8 @@ if __name__ == "__main__":
     window.show()
     splash.finish(window)           # fade out and hand focus to the browser
 
-    sys.exit(app.exec())
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
