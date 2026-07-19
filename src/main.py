@@ -2,8 +2,10 @@ import sys
 import os
 import glob
 import logging
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 from browser import WebBrowser
+from splash import BlacklineSplash, asset
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -54,12 +56,11 @@ if __name__ == "__main__":
             "Make sure Google Chrome is installed."
         )
 
+    # Suppress the noisy Chromium/compositor log spam.
+    # NOTE: this used to use setdefault(), which was a no-op because the key
+    # had just been assigned above — so --disable-logging never applied.
+    flags += " --disable-logging --log-level=3"
     os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = flags
-
-    # Suppress the noisy Qt compositor log spam
-    os.environ.setdefault('QTWEBENGINE_CHROMIUM_FLAGS',
-                          os.environ.get('QTWEBENGINE_CHROMIUM_FLAGS', '') +
-                          ' --disable-logging')
 
     app = QApplication(sys.argv)
     app.setApplicationName("Blackline Browser")
@@ -67,6 +68,16 @@ if __name__ == "__main__":
     app.setOrganizationName("Blackline")
     app.setOrganizationDomain("blackline.local")
 
-    window = WebBrowser()
+    icon_path = asset("icon.ico")
+    if icon_path:
+        app.setWindowIcon(QIcon(icon_path))
+
+    # ── Boot experience ────────────────────────────────────────────────────
+    splash = BlacklineSplash()
+    splash.run(5000)                # animated; click to skip, holds final frame
+
+    window = WebBrowser()           # vault prompt appears over the splash
     window.show()
+    splash.finish(window)           # fade out and hand focus to the browser
+
     sys.exit(app.exec())

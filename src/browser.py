@@ -38,7 +38,8 @@ from PyQt6.QtGui import QAction, QIcon, QKeySequence, QPalette, QColor, QFont
 
 from interceptors import Plugin, ChainedInterceptor, AdBlockInterceptor
 from dialogs import HistoryDialog, DevToolsDialog, PasswordManagerDialog, BookmarksDialog, NoteSidebar
-from vault import Vault
+from vault import Vault, VAULT_FILE
+from splash import VaultPasswordDialog
 from main_gui import DownloadPanel
 
 
@@ -712,9 +713,8 @@ class WebBrowser(QMainWindow):
         self.note_dock.hide()
 
         # ── Vault (password manager) ────────────────────────────────────────
-        password, ok = QInputDialog.getText(
-            self, "Vault Password", "Enter master password (or cancel to skip):",
-            QLineEdit.EchoMode.Password
+        password, ok = VaultPasswordDialog.ask(
+            vault_exists=os.path.exists(VAULT_FILE)
         )
         if ok and password:
             self.vault = Vault(password)
